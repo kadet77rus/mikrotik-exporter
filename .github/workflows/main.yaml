@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - 'v*' # Триггер на теги в формате v1.0.0
-    branches:
-      - master
   workflow_dispatch: # Возможность запуска вручную
 
 jobs:
