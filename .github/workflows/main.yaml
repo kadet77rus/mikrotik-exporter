@@ -14,8 +14,8 @@ jobs:
 
     strategy:
       matrix:
-        goos: [linux, windows, darwin] # Целевые операционные системы
-        goarch: [amd64, arm64] # Целевые архитектуры
+        goos: [linux] # Целевые операционные системы
+        goarch: [amd64] # Целевые архитектуры
 
     steps:
       - name: Checkout code
