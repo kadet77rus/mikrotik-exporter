@@ -31,7 +31,7 @@ jobs:
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o mikrotik-exporter-${{ matrix.goos }}-${{ matrix.goarch }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-pages-artifact@v3
         with:
           name: mikrotik-exporter-${{ matrix.goos }}-${{ matrix.goarch }}
           path: mikrotik-exporter-${{ matrix.goos }}-${{ matrix.goarch }}
