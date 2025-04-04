@@ -4,9 +4,9 @@ on:
   push:
     tags:
       - 'v*' # Триггер на теги в формате v1.0.0
-  workflow_dispatch: # Возможность запуска вручную
     branches:
       - master
+  workflow_dispatch: # Возможность запуска вручную
 
 jobs:
   build:
@@ -28,7 +28,7 @@ jobs:
 
       - name: Build for ${{ matrix.goos }}-${{ matrix.goarch }}
         run: |
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o mikrotik-exporter-${{ matrix.goos }}-${{ matrix.goarch }}
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o mikrotik-exporter-${{ matrix.goos }}-${{ matrix.goarch }} && ls -la
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
