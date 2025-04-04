@@ -1,72 +1,50 @@
-name: Build and Release
+name: wireguard-ui build release
 
 on:
-  push:
-    tags:
-      - 'v*' # Триггер на теги в формате v1.0.0
-  workflow_dispatch: # Возможность запуска вручную
+  release:
+    types: [created]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
+  releases-matrix:
+    name: Release Go Binary
+    runs-on: ubuntu-22.04
     strategy:
+      fail-fast: false
       matrix:
-        goos: [linux, windows] # Целевые операционные системы
-        goarch: [amd64] # Целевые архитектуры
-
+        # build and publish in parallel: linux/386, linux/amd64, darwin/386, darwin/amd64
+        goos: [linux, freebsd, darwin]
+        goarch: [386, amd64, arm, arm64]
+        exclude:
+          - goarch: 386
+            goos: darwin
+          - goarch: arm
+            goos: darwin
+          - goarch: arm64
+            goos: darwin
+        goarm:
+          - 7
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    # get the source code
+    - uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.20' # Укажите версию Go, совместимую с проектом
+    # set environment
+    - name: Set APP_VERSION env
+      run: echo "APP_VERSION=$(echo ${GITHUB_REF} | rev | cut -d'/' -f 1 | rev )" >> $GITHUB_ENV
+    - name: Set BUILD_TIME env
+      run: echo "BUILD_TIME=$(date)" >> $GITHUB_ENV
+    - name: Environment Printer
+      uses: managedkaos/print-env@v1.0
 
-      - name: Build for ${{ matrix.goos }}-${{ matrix.goarch }}
-        run: |
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o mikrotik-exporter-${{ matrix.goos }}-${{ matrix.goarch }} && ls -la
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: mikrotik-exporter-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: mikrotik-exporter-${{ matrix.goos }}-${{ matrix.goarch }}
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v') # Выполняется только при создании тега
-
-    strategy:
-      matrix:
-        goos: [linux, windows] # Целевые операционные системы
-        goarch: [amd64] # Целевые архитектуры
-
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Assets
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/mikrotik-exporter-${{ matrix.goos }}-${{ matrix.goarch }}
-          asset_name: mikrotik-exporter-${{ matrix.goos }}-${{ matrix.goarch }}
-          asset_content_type: application/octet-stream
+    # build and make the releases
+    - name: Build and make the releases
+      uses: wangyoucao577/go-release-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        goos: ${{ matrix.goos }}
+        goarch: ${{ matrix.goarch }}
+        goversion: "https://dl.google.com/go/go1.21.5.linux-amd64.tar.gz"
+        pre_command: export CGO_ENABLED=0
+        binary_name: "mikrotik-exporter"
+        build_flags: -v
+        ldflags: -X "main.appVersion=${{ env.APP_VERSION }}" -X "main.buildTime=${{ env.BUILD_TIME }}" -X main.gitCommit=${{ github.sha }} -X main.gitRef=${{ github.ref }}
